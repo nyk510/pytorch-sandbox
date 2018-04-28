@@ -11,7 +11,7 @@ pytorch でいろいろ遊んでみるリポジトリ
 ### docker による環境構築
 
 cuda 9.1 / cudnn 7 (ubuntu16.04) の docker 環境を構築します。
-イメージ内では `miniconda` 上に pytorch と諸々がインストールされます。
+イメージ内では miniconda 上に pytorch と諸々がインストールされます。
 
 ```bash
 docker pull nvidia/cuda:9.1-cudnn7-runtime
