@@ -93,6 +93,9 @@ class PlotGenerator(Callback):
             if isinstance(model, Generator):
                 gen = model
 
+        if gen is None:
+            return
+
         z_random = self.get_random_z(gen.z_dim, self.num_samples)
         z_gradual = self.get_gradual_z(gen.z_dim, self.num_samples)
 
@@ -125,8 +128,11 @@ class PlotGenerator(Callback):
         a = np.random.uniform(-1, 1, size=z_dim)
         b = np.random.uniform(-1, 1, size=z_dim)
         z = np.zeros(shape)
+
+        # a から b の値に徐々に変化させるため内分点を計算する
         for i in range(length):
             z[i, :] = a * i / length + b * (length - i) / length
+
         z = torch.from_numpy(z).type(torch.FloatTensor).to(self.device)
         return z
 
