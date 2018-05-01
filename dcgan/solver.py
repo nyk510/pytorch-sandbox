@@ -4,6 +4,7 @@
 """
 import torch
 from torch.optim import SGD, Adam
+from torch.optim.lr_scheduler import LambdaLR
 import numpy as np
 import torch.nn.functional as F
 
@@ -12,20 +13,20 @@ from tqdm import tqdm
 __author__ = "nyk510"
 
 
-class Trainer(object):
+class Solver(object):
     """
-    abstract class for trainer
+    abstract class for solver
     """
 
     def __init__(self, models, device=None):
         """
         :param tuple[torch.nn.Module] models: 学習中に重みが更新されるモデルの配列
-        :param str device:
+        :param str device: train 時のデバイス. `"cuda"` or `"cpu"`
         """
         self.models = models
 
         if isinstance(device, str):
-            if device == "cuda":
+            if device == "cuda" and torch.cuda.is_available():
                 self.device = torch.device("cuda")
             else:
                 self.device = torch.device("cpu")
@@ -50,7 +51,8 @@ class Trainer(object):
     def fit(self, train_iterator, valid_iterator=None, epochs=10, callbacks=None, initial_lr=0.01,
             optimizer_params=None):
         """
-        :param train_iterator:
+        訓練データを用いてモデルの fitting を行う
+        :param train_iterator: Iterable Object. 各 Iteration で (x_train, label_train) の tuple を返す
         :param valid_iterator:
         :param int epochs:
         :param list[Callback] callbacks:
@@ -65,14 +67,14 @@ class Trainer(object):
 
         for epoch in range(1, epochs + 1):
             self.start_epoch(epoch)
-            logs = self.train(epoch, train_iterator)
+            logs = self.train(train_iterator)
             self.end_epoch(epoch, logs)
         return self
 
     def set_optimizers(self, lr, params):
         raise NotImplementedError()
 
-    def train(self, epoch, train_iterator):
+    def train(self, train_iterator):
         logs = {}
         count = 0
         total = len(train_iterator)
@@ -81,35 +83,41 @@ class Trainer(object):
             logs = self._forward_backward_core(x, _, logs)
 
         for k, v in logs.items():
-            logs[k] /= count
+            if "loss" in k:
+                logs[k] /= count
         return logs
 
     def _forward_backward_core(self, x, t, logs):
         raise NotImplementedError()
 
 
-class DCGANTrainer(Trainer):
+class DCGANSolver(Solver):
     def __init__(self, generator, discriminator, device=None):
         """
         :param Generator generator:
         :param Discriminator discriminator:
         :param device:
         """
-        super(DCGANTrainer, self).__init__(models=(generator, discriminator), device=device)
+        super(DCGANSolver, self).__init__(models=(generator, discriminator), device=device)
         self.generator = generator
         self.discriminator = discriminator
         self.opt_generator = None
         self.opt_discriminator = None
 
+        self.lr_generator = None
+        self.lr_discriminator = None
         self.callbacks = None
 
     def set_optimizers(self, lr, params):
-        self.opt_generator = Adam(params=self.generator.parameters(),
-                                 lr=lr, betas=(0.5, 0.999))
-        self.opt_discriminator = Adam(params=self.discriminator.parameters(),
-                                     lr=lr, betas=(0.5, 0.999))
-        # self.opt_discriminator = SGD(self.discriminator.parameters(), lr=lr, **params)
-        # self.opt_generator = SGD(self.generator.parameters(), lr=lr, **params)
+        # self.opt_generator = Adam(params=self.generator.parameters(),
+        #                          lr=lr, betas=(0.5, 0.999))
+        # self.opt_discriminator = Adam(params=self.discriminator.parameters(),
+        #                              lr=lr, betas=(0.5, 0.999))
+        self.opt_discriminator = SGD(self.discriminator.parameters(), lr=lr, **params)
+        self.opt_generator = SGD(self.generator.parameters(), lr=lr, **params)
+
+        self.lr_discriminator = LambdaLR(self.opt_discriminator, lambda epoch: 0.5 ** (epoch // 4))
+        self.lr_generator = LambdaLR(self.opt_generator, lambda epoch: 0.5 ** (epoch // 4))
 
     def _get_target(self, batch, ones=True):
         if ones:
@@ -127,6 +135,11 @@ class DCGANTrainer(Trainer):
         for model in self.models:
             model.zero_grad()
 
+    def start_epoch(self, epoch):
+        super(DCGANSolver, self).start_epoch(epoch)
+        for lr_scheduler in [self.lr_generator, self.lr_discriminator]:
+            lr_scheduler.step()
+
     def _forward_backward_core(self, x, t, logs):
         """
 
@@ -140,8 +153,8 @@ class DCGANTrainer(Trainer):
         zeros = self._get_target(batch_size_i, ones=False)
 
         # train generator
-        noize = self._get_random_z(batch_size_i)
-        fakes = self.generator(noize)
+        noise = self._get_random_z(batch_size_i)
+        fakes = self.generator(noise)
         f_judges = self.discriminator(fakes)
         loss_generator = F.binary_cross_entropy(f_judges, target=ones)
 
@@ -150,8 +163,8 @@ class DCGANTrainer(Trainer):
         self.opt_generator.step()
 
         # train discriminator
-        noize = self._get_random_z(batch_size_i)
-        fakes = self.generator(noize)
+        noise = self._get_random_z(batch_size_i)
+        fakes = self.generator(noise)
         f_judges = self.discriminator(fakes)
 
         loss_discriminator = F.binary_cross_entropy(f_judges,
@@ -165,7 +178,7 @@ class DCGANTrainer(Trainer):
         loss_discriminator.backward()
         self.opt_discriminator.step()
 
-        for n, val in zip(("discriminator", "generator"), (loss_discriminator.item(), loss_generator.item())):
+        for n, val in zip(("loss_discriminator", "loss_generator"), (loss_discriminator.item(), loss_generator.item())):
             if n in logs.keys():
                 logs[n] += val
             else:
