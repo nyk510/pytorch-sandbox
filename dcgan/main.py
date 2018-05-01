@@ -1,6 +1,8 @@
 # coding: utf-8
 """
-write about this python script
+DCGAN の training を実行するメインスクリプト
+
+TODO:コマンドライン引数での制御が全く実装できていないのであとでやること
 """
 
 import torch
@@ -30,22 +32,30 @@ def get_emnist_dataset():
 
 def main():
     images = get_emnist_dataset()
+
+    # このあたりはコマンドライン引数にしたい
     n_batch = 128
     epochs = 1000
     hidden_dim = 32
-    device = torch.device("cuda")
+    device = "cuda"
+
     image_loader = DataLoader(images, batch_size=n_batch, shuffle=True, num_workers=8)
 
     generator = Generator(hidden_dim)
     discriminator = Discriminator()
 
-    # SGD なら 1e-3, Adam なら 1e-4 オーダー程度が安定する
+    # SGD なら 1e-3, Adam なら 1e-4 オーダー程度が安定するようです
     initial_lr = .005
+
     trainer = DCGANSolver(generator, discriminator, device)
+
+    # optimizer はなんとなく SGD with Nesterov
     optimizer_params = {
         "nesterov": True,
         "momentum": 0.8
     }
+
+    # エポック前後に実行するコールバックを配列で定義。
     callbacks = [
         PrintCallback(),
         PlotGenerator(),
