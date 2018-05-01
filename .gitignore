@@ -1,2 +1,7 @@
 dataset
 .ipynb_checkpoints
+__pycache__
+.idea
+
+**/*.png
+*.xml
