@@ -1,7 +1,11 @@
 # coding: utf-8
 """
-モデルの訓練を実行するクラスの定義
+モデルの訓練を実行するヘルパークラス `Solver` の定義ファイル
+
+実装してみるとこういったヘルパクラスは見通しがよくなり可読性が向上する一方で
+pytorch が本来持つ柔軟なネットワークが構築できるという利点が失われてしまうようにも思える。
 """
+
 import torch
 from torch.optim import SGD, Adam
 from torch.optim.lr_scheduler import LambdaLR

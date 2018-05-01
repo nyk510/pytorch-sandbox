@@ -1,7 +1,9 @@
 # coding: utf-8
 """
 学習中に呼び出されるコールバック関数の定義
+keras の callback てきな奴
 """
+
 import torch
 from torchvision.utils import make_grid
 import numpy as np
@@ -44,22 +46,16 @@ class Callback(object):
 
 
 class PrintCallback(Callback):
+    """
+    標準出力に経過をプリントする.
+    Todo: print ではなく logger.info などにする
+    """
     def start_epoch(self, epoch, **params):
         print("start epoch\t{epoch}".format(**locals()))
 
     def end_epoch(self, epoch, logs):
         print("end epoch\t{epoch}".format(**locals()))
         print(logs)
-
-
-def convert_image_np(inp):
-    """Convert a Tensor to numpy image."""
-    inp = inp.numpy().transpose((1, 2, 0))
-    mean = np.array([0.485, 0.456, 0.406])
-    std = np.array([0.229, 0.224, 0.225])
-    inp = std * inp + mean
-    inp = np.clip(inp, 0, 1)
-    return inp
 
 
 class DataframeLogger(Callback):
@@ -78,6 +74,16 @@ class DataframeLogger(Callback):
 
         self.df.to_csv(self.out_file)
 
+
+
+def convert_image_np(inp):
+    """Convert a Tensor to numpy image."""
+    inp = inp.numpy().transpose((1, 2, 0))
+    mean = np.array([0.485, 0.456, 0.406])
+    std = np.array([0.229, 0.224, 0.225])
+    inp = std * inp + mean
+    inp = np.clip(inp, 0, 1)
+    return inp
 
 class PlotGenerator(Callback):
     def __init__(self, num_samples=64, output_dir="./visualize"):
@@ -118,11 +124,26 @@ class PlotGenerator(Callback):
             plt.close("all")
 
     def get_random_z(self, z_dim, length=32):
+        """
+        return: torch.Tensor: shape = (length, z_dim)
+        """
         z = np.random.uniform(-1, 1, size=(length, z_dim))
         z = torch.from_numpy(z).type(torch.FloatTensor).to(self.device)
         return z
 
     def get_gradual_z(self, z_dim, length):
+        """
+        z_dim のベクトル `a` から別の z_dim のベクトル `b` との `length` の内分点を配列で返す
+
+        ex). z_dim = 2, length = 3, a = [0, 1], b = [1, 3]
+         [
+             [0., 1.],
+             [0.5, 2.],
+             [1.0, 3.]
+         ]
+         
+        return: torch.Tensor: shape = (length, z_dim)
+        """
         shape = (length, z_dim)
         np.random.seed(71)
         a = np.random.uniform(-1, 1, size=z_dim)

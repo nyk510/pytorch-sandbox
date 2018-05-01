@@ -1,6 +1,6 @@
 # coding: utf-8
 """
-define dcgan generator and discriminator
+DCGAN で用いる Generator Discriminator の定義
 """
 
 import torch
@@ -31,7 +31,10 @@ def make_layer(in_channels, out_channels, kernel=2, stride=2, padding=1, use_bat
 
 class Generator(nn.Module):
     """
-    ランダムベクトルから shape = (1, 28, 28) の画像を生成する generator
+    ランダムベクトルから shape = (1, 28, 28) の画像を生成するモジュール
+
+    Note: はじめ Linear な部分には Batchnorm1d を入れていなかったが学習が Discriminator に全く追いつかず崩壊した。
+    Generator のネットワーク構成はシビアっぽい
     """
 
     def __init__(self, z_dim=100):
@@ -64,12 +67,15 @@ class Generator(nn.Module):
 
 class Discriminator(nn.Module):
     """
-    (1, 28, 28) の画像が入力された時にそれが generator によって生成された画像かどうかを判別するモデル.
+    shape = (1, 28, 28) の画像が入力された時に
+    それが generator によって生成された画像かどうかを判別するモジュール
+
+    web で実装を見ていると活性化関数に LeakyReLU を用いているものがありそちらのほうが学習が安定するらしい。
+    今度活性化関数のみを変えて学習の安定度を見る等して差分を見てみたい。
     """
 
     def __init__(self):
         super().__init__()
-        layers = []
 
         self.feature = nn.Sequential(
             nn.Conv2d(1, 64, kernel_size=4, stride=2, padding=1),
