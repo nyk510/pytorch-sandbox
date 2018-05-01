@@ -40,7 +40,7 @@ def main():
     discriminator = Discriminator()
 
     # SGD なら 1e-3, Adam なら 1e-4 オーダー程度が安定する
-    initial_lr = .0005
+    initial_lr = .005
     trainer = DCGANSolver(generator, discriminator, device)
     optimizer_params = {
         "nesterov": True,

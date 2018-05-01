@@ -116,8 +116,8 @@ class DCGANSolver(Solver):
         self.opt_discriminator = SGD(self.discriminator.parameters(), lr=lr, **params)
         self.opt_generator = SGD(self.generator.parameters(), lr=lr, **params)
 
-        self.lr_discriminator = LambdaLR(self.opt_discriminator, lambda epoch: 0.5 ** (epoch // 4))
-        self.lr_generator = LambdaLR(self.opt_generator, lambda epoch: 0.5 ** (epoch // 4))
+        self.lr_discriminator = LambdaLR(self.opt_discriminator, lambda epoch: 0.95 ** (epoch // 2))
+        self.lr_generator = LambdaLR(self.opt_generator, lambda epoch: 0.95 ** (epoch // 2))
 
     def _get_target(self, batch, ones=True):
         if ones:
