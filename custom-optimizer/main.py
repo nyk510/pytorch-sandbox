@@ -173,5 +173,5 @@ def weight_transition(lam_min=-2, lam_max=1, steps=5):
 
 
 if __name__ == '__main__':
-    main()
-    # weight_transition()
+    # main()
+    weight_transition()

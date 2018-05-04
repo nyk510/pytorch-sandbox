@@ -7,8 +7,6 @@
 * [Regularized Dual Averaging method](https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/xiao10JMLR.pdf)
 * L1SGD: L1正則化項を考慮したSGD (上記と同じ論文)
 
-
-
 ## 実行
 
 ```bash
