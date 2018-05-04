@@ -45,7 +45,7 @@ def main():
     discriminator = Discriminator()
 
     # SGD なら 1e-3, Adam なら 1e-4 オーダー程度が安定するようです
-    initial_lr = .005
+    initial_lr = 1e-3
 
     trainer = DCGANSolver(generator, discriminator, device)
 
