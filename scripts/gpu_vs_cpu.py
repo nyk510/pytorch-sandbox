@@ -62,7 +62,6 @@ def train_network(device):
     n_epochs = 10
 
     for epoch in range(1, n_epochs + 1):
-        print('epoch: {}'.format(epoch))
         run_loss = .0
         for i, (x_batch, y_label) in enumerate(train_loader, 0):
             optimizer.zero_grad()
