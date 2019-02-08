@@ -1,0 +1,27 @@
+# 開発環境を立ち上げるための docker compose file
+version: '2.3'
+services:
+  jupyter:
+    build: 
+      context: ./
+      dockerfile: ./docker/gpu/Dockerfile
+    image: pytorch-sandbox-gpu
+    container_name: pytorch-sandbox-jupyter
+    runtime: nvidia
+    working_dir: /var/www/
+    ports:
+      - ${JUPYTER_PORT}:8888
+      - ${TENSORBOARD_PORT}:6006
+    runtime: nvidia
+    environment:
+      - PYTHONPATH=/var/www
+    volumes:
+      - ./:/var/www/
+      # dataset_dir: 学習時に使用するデータセットや学習済みモデルを保存するディレクトリを指定
+      - ${DATASET_DIR}:/data
+      # apply your local custom.css
+      - ./docker/jupyter-custom.css:/home/penguin/.jupyter/custom/custom.css
+      # js font matplotlib
+      - ./docker/matplotlibrc:/opt/conda/lib/python3.5/site-packages/matplotlib/mpl-data/matplotlibrc
+    env_file: 
+     - .env

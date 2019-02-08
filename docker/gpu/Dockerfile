@@ -1,0 +1,97 @@
+FROM nvidia/cuda:9.0-cudnn7-devel-ubuntu16.04
+
+LABEL maintainer="nyker <nykergoto@gmail.com>"
+
+ARG JUPYTER_PASSWORD="dolphin"
+ARG USER_NAME="penguin"
+ARG USER_PASSWORD="highway"
+
+ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
+
+RUN apt-get update && \
+  apt-get install -y \
+  build-essential \
+  curl \
+  wget \
+  bzip2 \
+  ca-certificates \
+  libglib2.0-0 \
+  libxext6 \
+  libsm6 \
+  libxrender1 \
+  git \
+  vim \
+  mercurial \
+  subversion \
+  cmake \
+  libboost-dev \
+  libboost-system-dev \
+  libboost-filesystem-dev \
+  gcc \
+  g++ \
+  nano \
+  unzip \
+  sudo
+
+ENV TINI_VERSION v0.6.0
+ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /usr/bin/tini
+RUN chmod +x /usr/bin/tini
+ENTRYPOINT [ "/usr/bin/tini", "--" ]
+
+# set miniconda dir path
+ENV CONDA_DIR /opt/conda
+ENV PATH ${CONDA_DIR}/bin:${PATH}
+
+RUN wget --quiet https://repo.continuum.io/miniconda/Miniconda3-4.1.11-Linux-x86_64.sh -O ~/miniconda.sh && \
+    /bin/bash ~/miniconda.sh -b -p ${CONDA_DIR} && \
+    rm ~/miniconda.sh
+
+# install requirements
+RUN conda update conda
+
+RUN pip install --upgrade pip
+
+# install additional packages
+ADD requirements.txt requirements.txt
+RUN pip install -U pip && pip install -r requirements.txt
+
+# additional packages
+RUN conda install jupyter notebook \
+ && conda install pytorch torchvision cudatoolkit=9.0 -c pytorch
+
+# install note fonts
+# use apt-get install note-fonts, matplotlib can't catch these fonts
+# so install from source zip file
+# see: http://mirai-tec.hatenablog.com/entry/2018/04/17/004343
+ENV NOTO_DIR /usr/share/fonts/opentype/notosans
+RUN mkdir -p ${NOTO_DIR} &&\
+  wget -q https://noto-website-2.storage.googleapis.com/pkgs/NotoSansCJKjp-hinted.zip -O noto.zip &&\
+  unzip ./noto.zip -d ${NOTO_DIR}/ &&\
+  chmod a+r ${NOTO_DIR}/NotoSans* &&\
+  rm ./noto.zip
+
+
+EXPOSE 8888
+
+# 後片付け
+RUN apt-get autoremove -y && apt-get clean && \
+  conda clean -i -l -t -y && \
+  rm -rf /usr/local/src/*
+
+# user をルートユーザーから切り替えます
+# ユーザー名とパスワードは arg を使って切り替えることが出来ます (このファイルの先頭を参照)
+RUN groupadd -g 1000 developer &&\
+  useradd -g developer -G sudo -m -s /bin/bash ${USER_NAME} &&\
+  echo "${USER_NAME}:${USER_PASSWORD}" | chpasswd
+USER ${USER_NAME}
+
+# jupyter の config ファイルの作成
+RUN mkdir ~/.jupyter &&\
+  echo "c.NotebookApp.open_browser = False\n\
+c.NotebookApp.ip = '*'\n\
+c.NotebookApp.token = '${JUPYTER_PASSWORD}'" | tee -a ${HOME}/.jupyter/jupyter_notebook_config.py
+
+WORKDIR /var/www/
+EXPOSE 8888
+
+CMD [ "jupyter", "notebook", "--ip=0.0.0.0", "--port=8888"]

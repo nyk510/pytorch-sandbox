@@ -1,0 +1,15 @@
+tensorflow-gpu==1.8.0
+boto3
+pillow
+opencv-python
+requests
+pandas
+numpy
+keras
+tqdm
+matplotlib
+seaborn
+sklearn
+scikit-image
+kaggle
+pyarrow
